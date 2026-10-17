@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Finder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <div class="bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.18),_transparent_30%),linear-gradient(to_bottom,_#020617,_#0f172a)]">
+        <main class="mx-auto max-w-5xl px-4 pb-40 pt-8 sm:px-6 lg:px-8">
+            <section class="mb-8 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-emerald-950/20 backdrop-blur sm:p-8">
+                <div class="max-w-2xl">
+                    <p class="mb-3 inline-flex rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.25em] text-emerald-200">
+                        Discover Your Next Track
+                    </p>
+                    <h1 class="text-4xl font-black tracking-tight text-white sm:text-5xl">
+                        Music Finder
+                    </h1>
+                    <p class="mt-3 text-sm leading-6 text-slate-300 sm:text-base">
+                        Search by song title or artist, preview tracks instantly, and move through your results without losing your place.
+                    </p>
+                </div>
+
+                <form method="get" class="mt-6 flex flex-col gap-3 sm:flex-row">
+                    <div class="flex-1">
+                        <label for="search-query" class="mb-2 block text-sm font-medium text-slate-200">
+                            Search songs or artists
+                        </label>
+                        <input
+                            id="search-query"
+                            name="q"
+                            value="{{ request.GET.q }}"
+                            placeholder="Try: Adele, Daft Punk, Blinding Lights..."
+                            class="w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20"
+                        >
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="mt-auto inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-300/30"
+                    >
+                        Search
+                    </button>
+                </form>
+            </section>
+
+            <section class="space-y-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-semibold text-white">Results</h2>
+                        <p class="text-sm text-slate-400">
+                            {% if request.GET.q %}
+                                Showing matches for "{{ request.GET.q }}"
+                            {% else %}
+                                Start with a search to explore tracks
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                {% for song in results %}
+                <article
+                    class="song-card group flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-emerald-400/40 hover:bg-white/10 sm:flex-row sm:items-center sm:justify-between"
+                    data-url="{% url 'play_song' song.id %}"
+                    data-title="{{ song.title|escapejs }}"
+                    data-artist="{{ song.artist|escapejs }}"
+                >
+                    <div class="flex items-center gap-4">
+                        <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-400 text-2xl text-slate-950 shadow-lg shadow-emerald-900/30">
+                            ♪
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-bold text-white">
+                                {{ song.title }}
+                            </h3>
+                            <p class="text-sm text-slate-400">
+                                {{ song.artist }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onclick="playSong('{% url 'play_song' song.id %}', '{{ song.title|escapejs }}', '{{ song.artist|escapejs }}')"
+                        class="inline-flex items-center justify-center rounded-xl bg-sky-500 px-4 py-2 font-semibold text-white transition hover:bg-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-300/30"
+                    >
+                        Play Preview
+                    </button>
+                </article>
+                {% empty %}
+                    <div class="rounded-3xl border border-dashed border-white/10 bg-white/5 px-6 py-12 text-center">
+                        <p class="text-xl font-semibold text-white">
+                            {% if request.GET.q %}
+                                No songs matched "{{ request.GET.q }}"
+                            {% else %}
+                                Search for a song or artist to get started
+                            {% endif %}
+                        </p>
+                        <p class="mt-2 text-sm text-slate-400">
+                            {% if request.GET.q %}
+                                Try a shorter phrase, a different spelling, or another artist name.
+                            {% else %}
+                                Your results will appear here with quick play controls.
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endfor %}
+            </section>
+        </main>
+    </div>
+
+    <div class="fixed inset-x-0 bottom-0 border-t border-white/10 bg-slate-950/90 backdrop-blur">
+        <div class="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <p class="text-xs uppercase tracking-[0.25em] text-slate-500">Now Playing</p>
+                    <p id="currentSongTitle" class="truncate text-sm font-semibold text-white">
+                        Pick a song to start listening
+                    </p>
+                    <p id="currentSongArtist" class="truncate text-xs text-slate-400">
+                        Your selected track will appear here
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button
+                        id="prevButton"
+                        type="button"
+                        onclick="prevSong()"
+                        class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        Prev
+                    </button>
+
+                    <button
+                        id="nextButton"
+                        type="button"
+                        onclick="nextSong()"
+                        class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+
+            <audio id="audioPlayer" controls class="w-full"></audio>
+        </div>
+    </div>
+
+    <script>
+        const playlist = [
+            {% for song in results %}
+            {
+                url: "{% url 'play_song' song.id %}",
+                title: "{{ song.title|escapejs }}",
+                artist: "{{ song.artist|escapejs }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        let currentIndex = -1;
+
+        const player = document.getElementById("audioPlayer");
+        const currentSongTitle = document.getElementById("currentSongTitle");
+        const currentSongArtist = document.getElementById("currentSongArtist");
+        const prevButton = document.getElementById("prevButton");
+        const nextButton = document.getElementById("nextButton");
+        const songCards = document.querySelectorAll(".song-card");
+
+        function updateControls() {
+            prevButton.disabled = currentIndex <= 0;
+            nextButton.disabled = currentIndex === -1 || currentIndex >= playlist.length - 1;
+        }
+
+        function updateActiveSong() {
+            songCards.forEach((card, index) => {
+                const isActive = index === currentIndex;
+                card.classList.toggle("ring-2", isActive);
+                card.classList.toggle("ring-emerald-400", isActive);
+                card.classList.toggle("border-emerald-400/50", isActive);
+                card.classList.toggle("bg-emerald-400/10", isActive);
+            });
+        }
+
+        function setNowPlaying(song) {
+            currentSongTitle.textContent = song.title;
+            currentSongArtist.textContent = song.artist;
+        }
+
+        function playSong(url, title, artist) {
+            const songIndex = playlist.findIndex((song) => song.url === url);
+
+            if (songIndex === -1) {
+                return;
+            }
+
+            currentIndex = songIndex;
+            player.src = url;
+            player.play();
+
+            setNowPlaying({
+                title: title || playlist[songIndex].title,
+                artist: artist || playlist[songIndex].artist
+            });
+            updateControls();
+            updateActiveSong();
+        }
+
+        function nextSong() {
+            if (currentIndex < playlist.length - 1) {
+                const nextTrack = playlist[currentIndex + 1];
+                playSong(nextTrack.url, nextTrack.title, nextTrack.artist);
+            }
+        }
+
+        function prevSong() {
+            if (currentIndex > 0) {
+                const previousTrack = playlist[currentIndex - 1];
+                playSong(previousTrack.url, previousTrack.title, previousTrack.artist);
+            }
+        }
+
+        player.addEventListener("ended", nextSong);
+        updateControls();
+    </script>
+</body>
+</html>
